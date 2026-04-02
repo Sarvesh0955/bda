@@ -1,0 +1,68 @@
+# ─── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# ─── Virtual Environment ─────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+
+# ─── Jupyter Notebooks ───────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ─── Data Files (too large for git) ──────────────────────────
+data/raw/
+data/processed/
+data/sample/
+*.csv
+*.nc
+*.nc4
+*.hdf5
+*.h5
+*.geojson
+*.shp
+*.dbf
+*.shx
+*.prj
+*.gpkg
+
+# ─── Trained Models ──────────────────────────────────────────
+models/*.joblib
+models/*.pkl
+models/*.h5
+models/*.pt
+
+# ─── Pipeline Logs ───────────────────────────────────────────
+pipeline_runs.log
+*.log
+
+# ─── IDE / Editor ────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ─── OS Files ────────────────────────────────────────────────
+Thumbs.db
+.DS_Store
+
+# ─── Streamlit ───────────────────────────────────────────────
+.streamlit/
+
+# ─── Environment Variables ───────────────────────────────────
+.env
+.env.local
+
+# ─── Docs generated assets ──────────────────────────────────
+docs/*.html
