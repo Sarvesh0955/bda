@@ -1,47 +1,33 @@
-# ─── Python ───────────────────────────────────────────────────
+# ─── Virtual Environment ─────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ─── Python ──────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 *.egg-info/
-*.egg
 dist/
 build/
-*.whl
 
-# ─── Virtual Environment ─────────────────────────────────────
-venv/
-.venv/
-env/
-.env/
+# ─── Raw Data (large, manually downloaded) ───────────────────
+data/raw/aqueduct/
+data/raw/aquastat/
+data/raw/grace/
 
-# ─── Jupyter Notebooks ───────────────────────────────────────
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-
-# ─── Data Files (too large for git) ──────────────────────────
-data/raw/
+# ─── Processed Data (regenerable via process_real_data.py) ───
 data/processed/
-data/sample/
-*.csv
-*.nc
-*.nc4
-*.hdf5
-*.h5
-*.geojson
-*.shp
-*.dbf
-*.shx
-*.prj
-*.gpkg
 
-# ─── Trained Models ──────────────────────────────────────────
+# ─── Trained Models (regenerable via train_models.py) ────────
 models/*.joblib
-models/*.pkl
-models/*.h5
-models/*.pt
 
-# ─── Pipeline Logs ───────────────────────────────────────────
+# ─── Jupyter Notebooks Checkpoints ───────────────────────────
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# ─── Logs ────────────────────────────────────────────────────
 pipeline_runs.log
 *.log
 
@@ -53,16 +39,10 @@ pipeline_runs.log
 *~
 .DS_Store
 
-# ─── OS Files ────────────────────────────────────────────────
+# ─── OS ──────────────────────────────────────────────────────
 Thumbs.db
 .DS_Store
 
-# ─── Streamlit ───────────────────────────────────────────────
-.streamlit/
-
-# ─── Environment Variables ───────────────────────────────────
+# ─── Secrets ─────────────────────────────────────────────────
 .env
-.env.local
-
-# ─── Docs generated assets ──────────────────────────────────
-docs/*.html
+.netrc

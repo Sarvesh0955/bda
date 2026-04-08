@@ -1,10 +1,8 @@
 # Data Extraction Workflow
 
 ## Overview
-This document describes the process for extracting water stress and drought data from three primary sources:
-1. **WRI Aqueduct 4.0** — Global water risk indicators (catchment level)
-2. **FAO AQUASTAT** — Country-level water resources and withdrawal data
-3. **NASA GRACE/GRACE-FO** — Satellite-derived Terrestrial Water Storage (TWS) anomalies
+
+This document describes the data sources and manual download process for the Water Stress & Drought Index Tracker. All three datasets are **manually downloaded** from their respective portals and placed in the `data/raw/` directory.
 
 ---
 
@@ -14,21 +12,28 @@ This document describes the process for extracting water stress and drought data
 - **Organization:** World Resources Institute (WRI)
 - **Dataset:** Aqueduct Water Risk Atlas 4.0
 - **License:** Creative Commons Attribution 4.0 International
-- **URL:** https://www.wri.org/aqueduct
+- **URL:** https://www.wri.org/data/aqueduct-global-maps-40-data
 - **GitHub:** https://github.com/wri/Aqueduct40
 
-### Access Method
-**Bulk CSV download** from WRI's data portal. No authentication required.
+### Download Instructions
 
-```python
-from src.extractors.aqueduct_extractor import AqueductExtractor
+1. Visit: https://www.wri.org/data/aqueduct-global-maps-40-data
+2. Click **"Download the dataset directly here"** (ZIP file, ~260 MB)
+3. Extract the ZIP to `data/raw/aqueduct/`
 
-extractor = AqueductExtractor()
-extractor.download_data("baseline_annual")  # Downloads ~50MB CSV
-extractor.download_data("country_rankings")
+Expected directory structure after extraction:
+```
+data/raw/aqueduct/
+└── Aqueduct40_waterrisk_download_Y2023M07D05/
+    ├── CVS/
+    │   ├── Aqueduct40_baseline_annual_y2023m07d05.csv   ← Primary file (193 MB)
+    │   ├── Aqueduct40_baseline_monthly_y2023m07d05.csv
+    │   └── Aqueduct40_future_annual_y2023m07d05.csv
+    ├── GDB/
+    └── Aqueduct40_README.xlsx
 ```
 
-### Key Indicators Extracted
+### Key Indicators
 | Indicator | Column | Scale | Description |
 |-----------|--------|-------|-------------|
 | Baseline Water Stress | `bws_score` | 0–5 | Ratio of water withdrawal to supply |
@@ -38,16 +43,13 @@ extractor.download_data("country_rankings")
 | Groundwater Decline | `gtd_score` | 0–5 | Rate of groundwater table decline |
 | Drought Risk | `drr_score` | 0–5 | Likelihood and severity of drought |
 | Flood Risk | `rfr_score` | 0–5 | Riverine/coastal flood risk |
+| Overall Water Risk | `w_awr_def_tot_score` | 0–5 | Composite risk score |
 
-### Data Schema
-- **Spatial Resolution:** HydroBASINS level-6 catchments (~250K globally)
+### Data Characteristics
+- **Spatial Resolution:** HydroBASINS level-6 catchments (~68,510 rows globally)
 - **Temporal:** Baseline (1979–2019 average), no time series
-- **Geography:** Global, per-catchment with lat/lon
-
-### Troubleshooting
-- **Download fails:** The extractor auto-generates realistic synthetic data as fallback
-- **Large file size:** The annual baseline CSV can be ~50MB; ensure adequate disk space
-- **Column naming:** Aqueduct 4.0 changed column names from v3.0; the extractor handles both
+- **Total Columns:** 231 (13 indicators × multiple representations + metadata)
+- **Sentinel Value:** `9999` indicates "Arid and Low Water Use" zones
 
 ---
 
@@ -59,15 +61,13 @@ extractor.download_data("country_rankings")
 - **URL:** https://data.apps.fao.org/aquastat/
 - **Custodian for:** SDG 6.4.2 (Level of Water Stress)
 
-### Access Method
-**HTTP CSV download** from the AQUASTAT Dissemination Platform.
+### Download Instructions
 
-```python
-from src.extractors.aquastat_extractor import AquastatExtractor
-
-extractor = AquastatExtractor()
-extractor.download_data()  # Downloads bulk CSV
-```
+1. Visit: https://data.apps.fao.org/aquastat/
+2. Close the welcome splash screen
+3. Click **"Share / Download"** in the top toolbar
+4. Select **"Bulk Download"** → choose **CSV** format
+5. Save as `data/raw/aquastat/bulk_eng(in).csv`
 
 ### Key Variables
 | Variable | ID | Unit | Description |
@@ -80,15 +80,12 @@ extractor.download_data()  # Downloads bulk CSV
 | Municipal Withdrawal | 4253 | 10⁹ m³/yr | Domestic water use |
 | Precipitation | 4101 | mm/yr | Average annual precipitation |
 
-### Data Schema
+### Data Characteristics
 - **Format:** Long format (one row per country × variable × year)
-- **Temporal:** 5-year intervals (1960–2020); interpolated to annual
-- **Geography:** Country-level (ISO-3 codes)
-
-### Troubleshooting
-- **Data format:** AQUASTAT uses long-format; the extractor pivots to wide-format automatically
-- **Sparse time series:** Data available at ~5-year intervals; pipeline interpolates linearly
-- **Manual download alternative:** Visit https://data.apps.fao.org/aquastat/ → filter → CSV export
+- **Encoding:** Latin-1 (special characters like Türkiye)
+- **Rows:** ~936,000 (199 unique variables)
+- **Temporal:** 5-year intervals (1960–2022)
+- **Geography:** Country-level
 
 ---
 
@@ -99,51 +96,28 @@ extractor.download_data()  # Downloads bulk CSV
 - **Mission:** GRACE (2002–2017) → GRACE-FO (2018–present)
 - **Product:** JPL Mascon CRI-filtered (RL06.3 v04)
 - **Collection:** `TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4`
-- **URL:** https://grace.jpl.nasa.gov/
-- **PO.DAAC:** https://podaac.jpl.nasa.gov/
+- **URL:** https://podaac.jpl.nasa.gov/
 
-### Access Method
-**`podaac-data-downloader`** CLI tool (recommended by NASA).
+### Download Instructions
 
-#### Prerequisites
-1. Create a free NASA Earthdata account: https://urs.earthdata.nasa.gov/
-2. Install the downloader:
+#### Option A: PO.DAAC Web Portal (no account needed for browse)
+1. Visit: https://podaac.jpl.nasa.gov/
+2. Search for `TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4`
+3. Download the latest NetCDF file
+4. Save as `data/raw/grace/1.nc`
+
+#### Option B: podaac-data-downloader CLI
+Requires a free NASA Earthdata account (https://urs.earthdata.nasa.gov/).
+
 ```bash
 pip install podaac-data-subscriber
-```
 
-#### Download Commands
-```bash
-# Basic download (all .nc files)
 podaac-data-downloader \
     -c TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4 \
     -d ./data/raw/grace \
     --start-date 2002-04-04T00:00:00Z \
-    --end-date 2024-12-31T00:00:00Z \
+    --end-date 2026-01-31T00:00:00Z \
     -e .nc
-
-# Download with spatial bounds
-podaac-data-downloader \
-    -c TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4 \
-    -d ./data/raw/grace \
-    --start-date 2002-04-04T00:00:00Z \
-    --end-date 2024-12-31T00:00:00Z \
-    -b="-180,-90,180,90"
-
-# Subscribe to recent data (last 24 hours)
-podaac-data-subscriber \
-    -c TELLUS_GRAC-GRFO_MASCON_CRI_GRID_RL06.3_V4 \
-    -d ./data/raw/grace \
-    -m 1440
-```
-
-#### Python Usage
-```python
-from src.extractors.grace_extractor import GraceExtractor
-
-extractor = GraceExtractor()
-extractor.download_data()  # Uses podaac-data-downloader internally
-df = extractor.extract_features()
 ```
 
 ### Key Variables
@@ -151,46 +125,36 @@ df = extractor.extract_features()
 |----------|-------------|------|-------------|
 | TWS Anomaly | `lwe_thickness` | cm EWH | Liquid Water Equivalent thickness anomaly |
 | Uncertainty | `uncertainty` | cm | Measurement uncertainty |
+| Land Mask | `land_mask` | — | Land/ocean indicator |
 
-### Derived Features
-- `tws_3month_avg`, `tws_6month_avg`, `tws_12month_avg`: Rolling averages
-- `tws_rate_of_change`: Monthly derivative
-- `tws_cumulative_change`: Cumulative anomaly from baseline
-- `groundwater_anomaly_cm`: Estimated groundwater component
-
-### Data Schema
-- **Format:** netCDF-4 (converted to tabular by extractor)
-- **Spatial Resolution:** 0.5° × 0.5° global grid (~8,000 mascon cells)
-- **Temporal:** Monthly (with some gaps during satellite transitions)
-- **Coverage:** April 2002 – present
-
-### Troubleshooting
-- **Authentication errors:** Ensure `.netrc` file has Earthdata credentials
-- **No podaac-data-downloader:** Extractor falls back to synthetic data
-- **netCDF reading errors:** Install `netCDF4` and `xarray`: `pip install netCDF4 xarray`
-- **Data gap (2017-06 to 2018-05):** Transition period between GRACE and GRACE-FO; filled by interpolation
+### Data Characteristics
+- **Format:** NetCDF-4
+- **Spatial Resolution:** 0.5° × 0.5° global grid (360 × 720)
+- **Temporal:** Monthly (253 time steps: April 2002 – January 2026)
+- **File Size:** ~43 MB
+- **Gap:** ~11 months during GRACE → GRACE-FO transition (mid-2017 to mid-2018)
 
 ---
 
-## Pipeline Summary
+## Processing Pipeline
 
-```
-WRI Aqueduct (CSV) ──→ aqueduct_extractor.py ──→ aqueduct_cleaned.csv
-                                                          │
-FAO AQUASTAT (CSV) ──→ aquastat_extractor.py ──→ aquastat_cleaned.csv ──→ data_merger.py ──→ drought_water_stress.csv
-                                                          │
-NASA GRACE (netCDF) ──→ grace_extractor.py ──→ grace_cleaned.csv
-```
-
-## Running the Full Pipeline
+After downloading all files manually, run:
 
 ```bash
-# Option 1: Run notebooks sequentially
-jupyter notebook notebooks/01_data_extraction_aqueduct.ipynb
-jupyter notebook notebooks/02_data_extraction_aquastat.ipynb
-jupyter notebook notebooks/03_data_extraction_grace.ipynb
-jupyter notebook notebooks/04_data_consolidation.ipynb
-
-# Option 2: Run the automated pipeline
-python -m src.pipeline.quarterly_pipeline
+source venv/bin/activate
+python process_real_data.py
 ```
+
+This produces clean datasets in `data/processed/`:
+
+```
+data/raw/                                    data/processed/
+├── aqueduct/...csv (193 MB)  ──────→  aqueduct_cleaned.csv  (31 KB, 228 countries)
+├── aquastat/bulk_eng(in).csv ──────→  aquastat_cleaned.csv   (538 KB, 74 countries)
+└── grace/1.nc (43 MB)        ──────→  grace_cleaned.csv      (2 MB, 72 countries)
+                                              │
+                                              ▼
+                                    drought_water_stress.csv  (5 MB, 18,216 rows × 39 cols)
+```
+
+See [data_processing.md](data_processing.md) for detailed processing documentation.

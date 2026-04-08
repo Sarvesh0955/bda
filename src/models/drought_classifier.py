@@ -108,8 +108,10 @@ class DroughtClassifier:
         # Handle missing values
         X = X.fillna(X.median())
 
-        # Encode target
-        self.label_encoder.fit(self.RISK_CLASSES)
+        # Encode target — fit on classes actually present in data
+        # (XGBoost requires labels starting from 0)
+        present_classes = sorted(y.unique())
+        self.label_encoder.fit(present_classes)
         y_encoded = self.label_encoder.transform(y)
 
         # Temporal split
