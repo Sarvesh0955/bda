@@ -119,6 +119,14 @@ def load_model():
         return joblib.load(model_files[0])
     return None
 
+@st.cache_resource
+def load_reg_model():
+    """Load the trained drought regressor (stress predictor)."""
+    model_files = list(config.MODELS_DIR.glob("stress_predictor_*.joblib"))
+    if model_files:
+        return joblib.load(model_files[0])
+    return None
+
 
 def render_metric_card(label, value, delta=None):
     """Render a custom styled metric card."""
@@ -403,76 +411,143 @@ def main():
 
     # ── Tab 4: Predictions ──
     with tab4:
-        st.markdown('<p class="section-header">Drought Risk Predictor</p>', unsafe_allow_html=True)
+        st.markdown('<p class="section-header">Machine Learning Predictors</p>', unsafe_allow_html=True)
 
-        model_data = load_model()
-        if model_data:
-            st.success("✅ ML model loaded successfully")
+        pred_tab1, pred_tab2 = st.tabs(["🚦 Drought Risk Classification", "📈 3-Month Stress Forecast"])
 
-            st.markdown("#### Input Parameters")
-            pcol1, pcol2, pcol3 = st.columns(3)
+        # ── Sub-tab 1: Classification ──
+        with pred_tab1:
+            model_data = load_model()
+            if model_data:
+                st.success("✅ Classification model loaded successfully")
 
-            with pcol1:
-                water_stress = st.slider("Water Stress Score (0-5)", 0.0, 5.0, 2.5, 0.1)
-                drought_risk = st.slider("Drought Risk Score (0-5)", 0.0, 5.0, 2.0, 0.1)
-            with pcol2:
-                tws_anomaly = st.slider("TWS Anomaly (cm)", -30.0, 30.0, 0.0, 0.5)
-                gw_anomaly = st.slider("Groundwater Anomaly (cm)", -20.0, 20.0, 0.0, 0.5)
-            with pcol3:
-                water_depletion = st.slider("Water Depletion Score", 0.0, 5.0, 1.5, 0.1)
-                composite = st.slider("Drought Composite", 0.0, 5.0, 2.0, 0.1)
+                st.markdown("#### Input Parameters")
+                pcol1, pcol2, pcol3 = st.columns(3)
 
-            if st.button("🔮 Predict Drought Risk", type="primary"):
-                model = model_data["model"]
-                features = model_data["feature_names"]
+                with pcol1:
+                    water_stress = st.slider("Water Stress Score (0-5)", 0.0, 5.0, 2.5, 0.1, key="clf_ws")
+                    drought_risk = st.slider("Drought Risk Score (0-5)", 0.0, 5.0, 2.0, 0.1, key="clf_dr")
+                with pcol2:
+                    tws_anomaly = st.slider("TWS Anomaly (cm)", -30.0, 30.0, 0.0, 0.5, key="clf_tws")
+                    gw_anomaly = st.slider("Groundwater Anomaly (cm)", -20.0, 20.0, 0.0, 0.5, key="clf_gw")
+                with pcol3:
+                    water_depletion = st.slider("Water Depletion Score", 0.0, 5.0, 1.5, 0.1, key="clf_wd")
+                    composite = st.slider("Drought Composite", 0.0, 5.0, 2.0, 0.1, key="clf_comp")
 
-                # Build input vector
-                input_dict = {f: 0.0 for f in features}
-                field_map = {
-                    "water_stress_score": water_stress,
-                    "drought_risk_score": drought_risk,
-                    "tws_anomaly_cm": tws_anomaly,
-                    "groundwater_anomaly_cm": gw_anomaly,
-                    "water_depletion_score": water_depletion,
-                    "drought_composite_score": composite,
-                }
-                for k, v in field_map.items():
-                    if k in input_dict:
-                        input_dict[k] = v
+                if st.button("🔮 Predict Drought Risk Class", type="primary"):
+                    model = model_data["model"]
+                    features = model_data["feature_names"]
 
-                X = pd.DataFrame([input_dict])
-                pred = model.predict(X)
-                label_encoder = model_data["label_encoder"]
-                risk_class = label_encoder.inverse_transform(pred)[0]
+                    # Build input vector
+                    input_dict = {f: 0.0 for f in features}
+                    field_map = {
+                        "water_stress_score": water_stress,
+                        "drought_risk_score": drought_risk,
+                        "tws_anomaly_cm": tws_anomaly,
+                        "groundwater_anomaly_cm": gw_anomaly,
+                        "water_depletion_score": water_depletion,
+                        "drought_composite_score": composite,
+                    }
+                    for k, v in field_map.items():
+                        if k in input_dict:
+                            input_dict[k] = v
 
-                proba = model.predict_proba(X)[0]
-                proba_dict = dict(zip(label_encoder.classes_, proba))
+                    X = pd.DataFrame([input_dict])
+                    pred = model.predict(X)
+                    label_encoder = model_data["label_encoder"]
+                    risk_class = label_encoder.inverse_transform(pred)[0]
 
-                st.markdown(f"### Predicted Risk: {get_risk_badge(risk_class)}", unsafe_allow_html=True)
+                    proba = model.predict_proba(X)[0]
+                    proba_dict = dict(zip(label_encoder.classes_, proba))
 
-                # Probability chart
-                prob_df = pd.DataFrame({
-                    "Risk Level": list(proba_dict.keys()),
-                    "Probability": list(proba_dict.values()),
-                })
-                fig = px.bar(
-                    prob_df, x="Risk Level", y="Probability",
-                    color="Risk Level",
-                    color_discrete_map={
-                        "Low": "#2ecc71", "Moderate": "#f39c12",
-                        "High": "#e74c3c", "Extreme": "#8e44ad"
-                    },
-                    title="Prediction Probabilities",
-                )
-                fig.update_layout(
-                    template="plotly_dark", height=350,
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    showlegend=False,
-                )
-                st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("⚠️ No trained model found. Run the ML pipeline first.")
-            st.code("cd /Users/sarvesh0955/College/bda && python -m src.models.drought_classifier", language="bash")
+                    st.markdown(f"### Predicted Risk: {get_risk_badge(risk_class)}", unsafe_allow_html=True)
+
+                    # Probability chart
+                    prob_df = pd.DataFrame({
+                        "Risk Level": list(proba_dict.keys()),
+                        "Probability": list(proba_dict.values()),
+                    })
+                    fig = px.bar(
+                        prob_df, x="Risk Level", y="Probability",
+                        color="Risk Level",
+                        color_discrete_map={
+                            "Low": "#2ecc71", "Moderate": "#f39c12",
+                            "High": "#e74c3c", "Extreme": "#8e44ad"
+                        },
+                        title="Prediction Probabilities",
+                    )
+                    fig.update_layout(
+                        template="plotly_dark", height=350,
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        showlegend=False,
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("⚠️ No classification model found. Run the ML pipeline first.")
+                st.code("python train_models.py", language="bash")
+
+        # ── Sub-tab 2: Regression ──
+        with pred_tab2:
+            reg_data = load_reg_model()
+            if reg_data:
+                st.success(f"✅ Regression model loaded successfully ({reg_data.get('model_name', 'Regressor')})")
+
+                st.markdown("#### Input Parameters")
+                rcol1, rcol2, rcol3 = st.columns(3)
+
+                with rcol1:
+                    r_water_stress = st.slider("Current Water Stress (0-5)", 0.0, 5.0, 2.5, 0.1, key="reg_ws")
+                    r_drought_risk = st.slider("Current Drought Risk (0-5)", 0.0, 5.0, 2.0, 0.1, key="reg_dr")
+                with rcol2:
+                    r_tws_anomaly = st.slider("Current TWS Anomaly (cm)", -30.0, 30.0, 0.0, 0.5, key="reg_tws")
+                    r_precip = st.slider("Annual Precipitation (mm)", 0.0, 3000.0, 500.0, 50.0, key="reg_precip")
+                with rcol3:
+                    r_composite = st.slider("Current Drought Composite", 0.0, 5.0, 2.0, 0.1, key="reg_comp")
+                    r_lag3 = st.slider("Drought Composite (3 mos ago)", 0.0, 5.0, 2.0, 0.1, key="reg_lag3")
+
+                if st.button("🔮 Forecast 3-Month Drought Score", type="primary"):
+                    model = reg_data["model"]
+                    scaler = reg_data["scaler"]
+                    features = reg_data["feature_names"]
+
+                    # Build input vector
+                    input_dict = {f: 0.0 for f in features}
+                    field_map = {
+                        "water_stress_score": r_water_stress,
+                        "drought_risk_score": r_drought_risk,
+                        "tws_anomaly_cm": r_tws_anomaly,
+                        "precipitation_mm": r_precip,
+                        "drought_composite_score": r_composite,
+                        "drought_composite_score_lag1": r_composite,
+                        "drought_composite_score_lag3": r_lag3,
+                        "drought_composite_score_rolling_mean_3": (r_composite + r_lag3) / 2.0,
+                    }
+                    for k, v in field_map.items():
+                        if k in input_dict:
+                            input_dict[k] = v
+
+                    X = pd.DataFrame([input_dict])
+                    if scaler:
+                        X_scaled = scaler.transform(X)
+                        pred_score = model.predict(X_scaled)[0]
+                    else:
+                        pred_score = model.predict(X)[0]
+
+                    # Clip to valid range 0-5
+                    pred_score = max(0.0, min(5.0, pred_score))
+
+                    st.markdown(f"### Forecasted 3-Month Drought Composite Score: **{pred_score:.2f}**")
+                    
+                    # Also classify it for easy reading
+                    if pred_score < 1.0: forecasted_risk = "Low"
+                    elif pred_score < 2.0: forecasted_risk = "Moderate"
+                    elif pred_score < 3.5: forecasted_risk = "High"
+                    else: forecasted_risk = "Extreme"
+                    
+                    st.markdown(f"**Implied Risk Class:** {get_risk_badge(forecasted_risk)}", unsafe_allow_html=True)
+            else:
+                st.warning("⚠️ No regression model found. Run the ML pipeline first.")
+                st.code("python train_models.py", language="bash")
 
     # ── Tab 5: Data Explorer ──
     with tab5:
