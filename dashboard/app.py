@@ -105,7 +105,8 @@ def load_data():
     if data_path.exists():
         df = pd.read_csv(data_path)
         if "date" in df.columns:
-            df["date"] = pd.to_datetime(df["date"], errors="coerce")
+            # Force to consistent datetime64 without mixed tz objects
+            df["date"] = pd.to_datetime(df["date"], errors="coerce", utc=True).dt.tz_localize(None)
         return df
     return None
 
@@ -504,7 +505,7 @@ def main():
         # Summary statistics
         with st.expander("📊 Summary Statistics"):
             st.dataframe(
-                filtered.describe().round(3),
+                filtered.select_dtypes(include=[np.number]).describe().round(3),
                 use_container_width=True,
             )
 

@@ -68,21 +68,27 @@ bda/
 │   └── app.py                 # Streamlit web dashboard
 ├── src/
 │   ├── models/                # ML model classes (classifier + predictor)
-│   ├── extractors/            # Data extraction utilities
-│   ├── processing/            # Data cleaning & merging
 │   └── visualization/         # Maps & charts
 ├── notebooks/                 # Jupyter notebooks for exploration
-│   ├── 01–03                  # Data extraction & exploration
-│   ├── 04                     # Data consolidation
-│   ├── 05                     # EDA & visualization
-│   ├── 06                     # Drought risk modeling
-│   └── 07                     # Seasonal water stress mapping
+│   ├── 01_data_extraction_and_handling.ipynb   # Geospatial data handling
+│   ├── 02_eda_visualization.ipynb              # EDA & Visualization
+│   ├── 03_drought_risk_modeling.ipynb          # ML modeling
+│   └── 04_seasonal_water_stress_mapping.ipynb  # Mapping
 └── docs/
     ├── extraction_workflow.md # How to download data
     ├── data_processing.md     # Processing pipeline documentation
     ├── ml_methods.md          # Model architecture & evaluation
     └── pipeline_guide.md      # Full pipeline guide
 ```
+
+## 📓 Notebooks
+
+| # | Notebook | Purpose |
+|---|----------|---------|
+| 01 | `data_extraction_and_handling` | Download & explore WRI, FAO, and GRACE data |
+| 02 | `eda_visualization` | Global maps, distributions, correlations |
+| 03 | `drought_risk_modeling` | ML classification + regression + SHAP |
+| 04 | `seasonal_water_stress_mapping` | K-Means clustering, animated maps |
 
 ## 🤖 ML Models
 
